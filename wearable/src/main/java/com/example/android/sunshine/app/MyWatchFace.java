@@ -59,6 +59,8 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+import static android.R.attr.centerX;
+
 /**
  * Digital watch face with seconds. In ambient mode, the seconds aren't displayed. On devices with
  * low-bit ambient mode, the text is drawn without anti-aliasing in ambient mode.
@@ -304,6 +306,23 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
                     mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+
+            float centerX = bounds.centerX();
+            float centerY = bounds.centerY();
+
+            //Draw Icon and Temperatures
+            if (mHighTemp != null && mLowTemp != null) {
+                float tempYOffset = mYOffset + getResources().getDimension(R.dimen.date_margin_bottom);
+                //Icon
+                if (mIcon != null && !mLowBitAmbient)
+                    canvas.drawBitmap(mIcon, centerX - mIcon.getWidth() - mIcon.getWidth() / 4, tempYOffset - mIcon.getHeight() / 2, mTextPaint);
+                //High temp
+                canvas.drawText(mHighTemp, centerX, tempYOffset, mTextPaint);
+                //Low temp
+                float highTempSize = mTextPaint.measureText(mHighTemp);
+                float highTempRightMargin = getResources().getDimension(R.dimen.date_margin_right);
+                canvas.drawText(mLowTemp, centerX + highTempSize + highTempRightMargin, tempYOffset +2*getResources().getDimension(R.dimen.date_margin_bottom), mTextPaint);
+            }
         }
 
         /**

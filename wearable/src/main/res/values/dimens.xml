@@ -6,4 +6,6 @@
     <dimen name="digital_x_offset_round">25dp</dimen>
     <dimen name="digital_y_offset">90dp</dimen>
     <dimen name="icon_size">50dp</dimen>
+    <dimen name="date_margin_bottom">40dp</dimen>
+    <dimen name="date_margin_right">10dp</dimen>
 </resources>
