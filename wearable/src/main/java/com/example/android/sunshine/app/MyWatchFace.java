@@ -29,14 +29,28 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
+
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -85,13 +99,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine implements GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks, DataApi.DataListener {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
         boolean mAmbient;
         Calendar mCalendar;
+        String mDay;
+        String mMonth;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -107,6 +123,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
          * disable anti-aliasing in ambient mode.
          */
         boolean mLowBitAmbient;
+        GoogleApiClient mGoogleApiClient;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -128,6 +145,20 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
 
             mCalendar = Calendar.getInstance();
+
+            // Much thanks http://stackoverflow.com/a/23266601/3455743 :)
+            mDay = mCalendar.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault());
+            mMonth = mCalendar.getDisplayName(Calendar.MONTH,Calendar.LONG,Locale.getDefault());
+
+
+            // Create instance of GoogleAPIClient
+            mGoogleApiClient = new GoogleApiClient.Builder(getBaseContext()).addApi(Wearable.API)
+                    .addOnConnectionFailedListener(this)
+                    .addConnectionCallbacks(this)
+                    .build();
+
+            // We should connect it here as onCreate does most of the heavy lifting and rest is just canvas updation
+            mGoogleApiClient.connect();
         }
 
         @Override
@@ -296,6 +327,39 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 long delayMs = INTERACTIVE_UPDATE_RATE_MS
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+            }
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.d(LOG_TAG,"Connection failed due to" + connectionResult.getErrorMessage());
+        }
+
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.d(LOG_TAG,"Connected ");
+            Wearable.DataApi.addListener(mGoogleApiClient,Engine.this);
+
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+            Log.d(LOG_TAG,"Connection suspended: "+i);
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEventBuffer) {
+            Log.d(LOG_TAG,"Got new data :)");
+            for(DataEvent dataevent : dataEventBuffer)
+            {
+                if(dataevent.getType() == DataEvent.TYPE_CHANGED)
+                {
+                    DataItem dataitem = dataevent.getDataItem();
+                    if(dataitem.getUri().getPath().equals(getString(R.string.API_PATH)))
+                    {
+                        DataMap dataMap = DataMapItem.fromDataItem(dataitem).getDataMap();
+                    }
+                }
             }
         }
     }

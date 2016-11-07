@@ -36,6 +36,7 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.example.android.sunshine.app.data.WeatherContract;
@@ -209,6 +210,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
                         .error(Utility.getArtResourceForWeatherCondition(weatherId))
                         .crossFade()
                         .into(mIconView);
+                Toast.makeText(getContext(), weatherId, Toast.LENGTH_SHORT).show();
             }
 
             // Read date from cursor and update views for day of week and date
