@@ -27,6 +27,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.ShareActionProvider;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -200,6 +201,7 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
 
             // Read weather condition ID from cursor
             int weatherId = data.getInt(COL_WEATHER_CONDITION_ID);
+            Log.d(LOG_TAG," Weather ID is "+weatherId);
 
             if ( Utility.usingLocalGraphics(getActivity()) ) {
                 mIconView.setImageResource(Utility.getArtResourceForWeatherCondition(weatherId));

@@ -21,11 +21,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -40,6 +43,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -48,6 +52,7 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.Locale;
@@ -124,6 +129,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
          */
         boolean mLowBitAmbient;
         GoogleApiClient mGoogleApiClient;
+        private String mHighTemp;
+        private String mLowTemp;
+        private Bitmap mIcon;
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -358,9 +366,50 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     if(dataitem.getUri().getPath().equals(getString(R.string.API_PATH)))
                     {
                         DataMap dataMap = DataMapItem.fromDataItem(dataitem).getDataMap();
+                        mHighTemp = dataMap.getString("high-temp");
+                        mLowTemp = dataMap.getString("low-temp");
+                        new FetchIcon().execute(dataMap.getAsset("icon"));
+                        //https://discussions.udacity.com/t/added-some-receive-code-in-the-wear-side/190479/93
                     }
                 }
             }
         }
+
+        private class FetchIcon extends AsyncTask<Asset,Void,Void>{
+
+            private Asset[] assets;
+
+            @Override
+            protected Void doInBackground(Asset... params) {
+
+                Asset asset = params[0];
+                mIcon = loadBitmapFromAsset(asset);
+
+                int size = Double.valueOf(getApplicationContext().getResources().getDimension(R.dimen.icon_size)).intValue();
+                mIcon = Bitmap.createScaledBitmap(mIcon, size, size, false);
+                postInvalidate();
+
+                return  null; // To satisfy void return
+            }
+        }
+
+        private Bitmap loadBitmapFromAsset(Asset asset) {
+            if (asset == null)
+                return null;
+
+            ConnectionResult result = mGoogleApiClient.blockingConnect(500, TimeUnit.MILLISECONDS);
+            if (!result.isSuccess())
+                return null;
+
+            // convert asset into a file descriptor and block until it's ready
+            InputStream assetInputStream = Wearable.DataApi.getFdForAsset(mGoogleApiClient, asset).await().getInputStream();
+
+            if (assetInputStream == null)
+                return null;
+
+            // decode the stream into a bitmap
+            return BitmapFactory.decodeStream(assetInputStream);
+            }
+        }
     }
-}
+

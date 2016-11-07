@@ -40,6 +40,12 @@ import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallbacks;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.wearable.Asset;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import org.json.JSONArray;
@@ -47,6 +53,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -64,7 +71,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements 
             "com.example.android.sunshine.app.ACTION_DATA_UPDATED";
     // Interval at which to sync with the weather, in seconds.
     // 60 seconds (1 minute) * 180 = 3 hours
-    public static final int SYNC_INTERVAL = 60 * 180;
+    public static final int SYNC_INTERVAL = 60 * 5; //Change to 5 minutes for debugging with watch
     public static final int SYNC_FLEXTIME = SYNC_INTERVAL/3;
     private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
     private static final int WEATHER_NOTIFICATION_ID = 3004;
@@ -414,10 +421,40 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements 
         String highTemp = Utility.formatTemperature(getContext(), cursor.getDouble(INDEX_MAX_TEMP));
         String lowTemp = Utility.formatTemperature(getContext(), cursor.getDouble(INDEX_MIN_TEMP));
         int iconId = Utility.getIconResourceForWeatherCondition(weatherId);
+        Bitmap iconBitmap = BitmapFactory.decodeResource(getContext().getResources(), iconId);
 
+        PutDataMapRequest mapRequest = PutDataMapRequest.create(getContext().getString(R.string.DATA_API));
+        mapRequest.getDataMap().putString("high-temp", highTemp);
+        mapRequest.getDataMap().putString("low-temp", lowTemp);
+        mapRequest.getDataMap().putAsset("icon", createAssetFromBitmap(iconBitmap));
+        // Add time as variable so that datachange is detected on the other end, as suggested on the forums
+        mapRequest.getDataMap().putLong("time", System.currentTimeMillis());
 
+        PutDataRequest request = mapRequest.asPutDataRequest();
+        // https://discussions.udacity.com/t/added-some-receive-code-in-the-wear-side/190479/49?u=jatindhankhar
+        // This helps to sync data ASAP, otherwise it may take upto 30 mins to sync data. Helps debugging stuff
+        request.setUrgent();
+        Wearable.DataApi.putDataItem(mGoogleApiClient, request).setResultCallback(new ResultCallbacks<DataApi.DataItemResult>() {
+            @Override
+            public void onSuccess(@NonNull DataApi.DataItemResult dataItemResult) {
+            Log.d(LOG_TAG,"Success :)");
+            }
+
+            @Override
+            public void onFailure(@NonNull Status status) {
+                Log.d(LOG_TAG,"Failure :)");
+            }
+        });
 
     }
+
+    // Thanks https://developer.android.com/training/wearables/data-layer/assets.html :)
+    private static Asset createAssetFromBitmap(Bitmap bitmap) {
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteStream);
+        return Asset.createFromBytes(byteStream.toByteArray());
+    }
+
     private void updateWearable() {
         if(mGoogleApiClient.isConnected())
         {
