@@ -111,10 +111,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
+        Paint mDatePaint;
+        Paint mTempHighPaint;
+        Paint mLowPaint;
         boolean mAmbient;
         Calendar mCalendar;
         String mDay;
         String mMonth;
+        String mMonthDate;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -151,14 +155,16 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
 
-            mTextPaint = new Paint();
+            //mTextPaint = new Paint();
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
-
+            //mDatePaint = new Paint();
+            mDatePaint = createTextPaint(resources.getColor(R.color.date_text));
             mCalendar = Calendar.getInstance();
 
             // Much thanks http://stackoverflow.com/a/23266601/3455743 :)
             mDay = mCalendar.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.SHORT, Locale.getDefault());
-            mMonth = mCalendar.getDisplayName(Calendar.MONTH,Calendar.LONG,Locale.getDefault());
+            mMonth = mCalendar.getDisplayName(Calendar.MONTH,Calendar.SHORT,Locale.getDefault());
+            mMonthDate = mCalendar.getDisplayName(Calendar.DAY_OF_MONTH, Calendar.SHORT, Locale.getDefault());
 
 
             // Create instance of GoogleAPIClient
@@ -230,10 +236,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             boolean isRound = insets.isRound();
             mXOffset = resources.getDimension(isRound
                     ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
+            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
-
+            float dateTextSize = resources.getDimension(R.dimen.digital_date_size);
             mTextPaint.setTextSize(textSize);
+            mDatePaint.setTextSize(dateTextSize);
         }
 
         @Override
@@ -300,28 +308,38 @@ public class MyWatchFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
 
-            String text = mAmbient
-                    ? String.format("%d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE))
-                    : String.format("%d:%02d:%02d", mCalendar.get(Calendar.HOUR),
-                    mCalendar.get(Calendar.MINUTE), mCalendar.get(Calendar.SECOND));
-            canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+            String text = String.format("%d:%02d", mCalendar.get(Calendar.HOUR), mCalendar.get(Calendar.MINUTE));
+            //Toast.makeText(MyWatchFace.this, text, Toast.LENGTH_SHORT).show();
+            //Log.d(LOG_TAG,text);
 
             float centerX = bounds.centerX();
             float centerY = bounds.centerY();
 
+            String time_day =  String.format(Locale.ENGLISH,"%d:%02d", mCalendar.getTime().getHours(), mCalendar.getTime().getMinutes());
+            float timeTextSize = mTextPaint.measureText(time_day);
+            canvas.drawText(time_day, centerX - timeTextSize/2, mYOffset - timeTextSize/6, mTextPaint);
+            String dateText = mDay + "," + mMonth + " " + mCalendar.get(Calendar.DAY_OF_MONTH);
+            float dateTextSize = mDatePaint.measureText(dateText);
+            float dateYOffset = mYOffset + getResources().getDimension(R.dimen.digital_time_text_margin_bottom);
+            canvas.drawText(dateText.toUpperCase(), centerX - dateTextSize / 2, dateYOffset, mDatePaint);
+
+
+
+
+
+
             //Draw Icon and Temperatures
             if (mHighTemp != null && mLowTemp != null) {
-                float tempYOffset = mYOffset + getResources().getDimension(R.dimen.date_margin_bottom);
+                float tempYOffset = dateYOffset + getResources().getDimension(R.dimen.digital_date_text_margin_bottom);
                 //Icon
-                if (mIcon != null && !mLowBitAmbient)
-                    canvas.drawBitmap(mIcon, centerX - mIcon.getWidth() - mIcon.getWidth() / 4, tempYOffset - mIcon.getHeight() / 2, mTextPaint);
+                if (mIcon != null && !isInAmbientMode())
+                    canvas.drawBitmap(mIcon, centerX - mIcon.getWidth() - mIcon.getWidth() / 4, tempYOffset - mIcon.getHeight() / 2, mDatePaint);
                 //High temp
                 canvas.drawText(mHighTemp, centerX, tempYOffset, mTextPaint);
                 //Low temp
                 float highTempSize = mTextPaint.measureText(mHighTemp);
-                float highTempRightMargin = getResources().getDimension(R.dimen.date_margin_right);
-                canvas.drawText(mLowTemp, centerX + highTempSize + highTempRightMargin, tempYOffset +2*getResources().getDimension(R.dimen.date_margin_bottom), mTextPaint);
+                float highTempRightMargin = getResources().getDimension(R.dimen.digital_temp_text_margin_right);
+                canvas.drawText(mLowTemp, centerX + highTempSize + highTempRightMargin, tempYOffset, mDatePaint);
             }
         }
 
