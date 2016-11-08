@@ -333,13 +333,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 float tempYOffset = dateYOffset + getResources().getDimension(R.dimen.digital_date_text_margin_bottom);
                 //Icon
                 if (mIcon != null && !isInAmbientMode())
-                    canvas.drawBitmap(mIcon, centerX - mIcon.getWidth() - mIcon.getWidth() / 4, tempYOffset - mIcon.getHeight() / 2, mDatePaint);
+                    canvas.drawBitmap(mIcon, centerX - mIcon.getWidth() - mIcon.getWidth() / 2, tempYOffset - mIcon.getHeight() / 2, mDatePaint);
                 //High temp
                 canvas.drawText(mHighTemp, centerX, tempYOffset, mTextPaint);
                 //Low temp
                 float highTempSize = mTextPaint.measureText(mHighTemp);
                 float highTempRightMargin = getResources().getDimension(R.dimen.digital_temp_text_margin_right);
-                canvas.drawText(mLowTemp, centerX + highTempSize + highTempRightMargin, tempYOffset, mDatePaint);
+                canvas.drawText(mLowTemp, centerX + highTempSize + highTempRightMargin - highTempRightMargin, tempYOffset, mDatePaint);
             }
         }
 
